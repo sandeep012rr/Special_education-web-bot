@@ -3,58 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Testbook Exam Portal</title>
+  <title>Testbook Portal & Dashboard</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f7f9fa; color: #1c252c; padding-bottom: 70px; user-select: none; }
-    
-    .top-bar { background: #0073e6; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
-    .timer-badge { font-weight: 700; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 6px; font-size: 14px; letter-spacing: 0.5px; }
 
+    /* Top Bar */
+    .top-bar { background: #0073e6; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .timer-badge { font-weight: 700; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 6px; font-size: 14px; }
+    .nav-btn-icon { background: none; border: none; color: white; font-size: 18px; cursor: pointer; }
+
+    /* Dashboard & Folder System */
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .section-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .folder-card { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; border: 1.5px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.15s; }
+    .folder-card:hover { border-color: #0073e6; background: #fdfefe; }
+    .folder-left { display: flex; align-items: center; gap: 12px; }
+    .folder-icon { font-size: 24px; color: #f59e0b; }
+    .folder-title { font-size: 15px; font-weight: 600; }
+    .folder-count { font-size: 12px; color: #57606a; margin-top: 2px; }
+
+    .test-card { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid #e1e4e8; display: flex; justify-content: space-between; align-items: center; }
+    .test-title { font-size: 15px; font-weight: 600; }
+    .test-meta { font-size: 12px; color: #57606a; margin-top: 4px; }
+    .start-btn { background: #0073e6; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+    /* Admin Action Section */
+    .admin-bar { background: #eef2f6; border-radius: 8px; padding: 12px; margin-bottom: 16px; border: 1px dashed #0073e6; }
+    .admin-input { width: 70%; padding: 8px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+    .admin-btn { padding: 8px 12px; background: #0073e6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* Test Environment */
     .palette-scroller { background: white; padding: 10px 14px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #e1e4e8; display: flex; gap: 8px; }
     .pal-btn { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 1.5px solid #d0d7de; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; cursor: pointer; color: #57606a; background: white; }
     .pal-btn.current { border-color: #0073e6; border-width: 2.5px; color: #0073e6; }
     .pal-btn.answered { background: #2da44e; color: white; border-color: #2da44e; }
 
     .exam-canvas { padding: 16px; max-width: 650px; margin: 0 auto; }
-    .q-badge { display: inline-block; font-size: 12px; font-weight: 700; color: #0073e6; background: #ddf4ff; padding: 2px 8px; border-radius: 4px; margin-bottom: 10px; }
-    .q-text { font-size: 16px; font-weight: 600; line-height: 1.55; margin-bottom: 18px; color: #24292f; }
-    
-    .opt-card { background: white; border: 1.5px solid #e1e4e8; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: all 0.15s ease-in-out; }
+    .q-text { font-size: 16px; font-weight: 600; line-height: 1.55; margin-bottom: 18px; }
+    .opt-card { background: white; border: 1.5px solid #e1e4e8; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: flex; gap: 10px; cursor: pointer; }
     .opt-card.selected { border-color: #0073e6; background: #f0f7ff; box-shadow: 0 0 0 1px #0073e6; }
-    .opt-tag { font-weight: 700; color: #57606a; font-size: 14px; margin-top: 1px; }
-    .opt-desc { font-size: 15px; line-height: 1.45; color: #24292f; }
 
-    .control-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e1e4e8; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 100; max-width: 650px; margin: 0 auto; }
+    .control-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e1e4e8; padding: 10px 16px; display: flex; justify-content: space-between; max-width: 650px; margin: 0 auto; z-index: 100; }
     .nav-btn { padding: 9px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
     .btn-prev { background: #eaeef2; color: #24292f; }
     .btn-next { background: #0073e6; color: white; }
     .btn-submit { background: #2da44e; color: white; }
 
+    /* Solutions */
     .sol-card { background: white; border-radius: 10px; border: 1px solid #e1e4e8; padding: 16px; margin-bottom: 16px; text-align: left; }
-    .sol-card.correct-ans { border-left: 5px solid #2da44e; }
-    .sol-card.wrong-ans { border-left: 5px solid #cf222e; }
-    .sol-box { background: #f6f8fa; padding: 12px; border-radius: 6px; margin-top: 10px; font-size: 14px; line-height: 1.5; }
-    .kp-box { background: #fff8c5; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+    .sol-box { background: #f6f8fa; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; }
+    .kp-box { background: #fff8c5; padding: 10px; border-radius: 6px; margin-top: 6px; font-size: 13px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
 
-  <div id="test-view">
+  <!-- VIEW 1: FOLDER DASHBOARD -->
+  <div id="view-dashboard" class="container">
+    <div class="section-title">
+      <span>📁 Test Folders</span>
+      <button class="admin-btn" onclick="toggleAdminPanel()">+ Manage Folders</button>
+    </div>
+
+    <!-- Admin Panel (Folder Creation) -->
+    <div id="admin-panel" class="admin-bar" style="display:none;">
+      <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Naya Folder Banayein:</div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="new-folder-name" class="admin-input" placeholder="Folder ka naam (e.g. Batch 2)">
+        <button class="admin-btn" onclick="createFolder()">Create</button>
+      </div>
+    </div>
+
+    <div id="folder-list">Folders load ho rahe hain...</div>
+  </div>
+
+  <!-- VIEW 2: TESTS INSIDE A FOLDER -->
+  <div id="view-folder-tests" class="container" style="display:none;">
+    <div class="section-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="nav-btn-icon" style="color:#0073e6;" onclick="showFolderDashboard()">←</button>
+        <span id="current-folder-title">Folder Name</span>
+      </div>
+    </div>
+    <div id="tests-list">Tests load ho rahe hain...</div>
+  </div>
+
+  <!-- VIEW 3: LIVE EXAM SCREEN -->
+  <div id="view-exam" style="display:none;">
     <div class="top-bar">
-      <span id="counter-label" style="font-weight:600; font-size:14px;">Question 1</span>
+      <span id="counter-label" style="font-weight:600; font-size:14px;">Q 1</span>
       <div class="timer-badge" id="timer">30:00</div>
     </div>
-
     <div class="palette-scroller" id="palette-grid"></div>
-
     <div class="exam-canvas">
-      <div class="q-badge">Single Choice • +1.0, -0.0</div>
-      <div class="q-text" id="q-content">लोड हो रहा है...</div>
+      <div class="q-text" id="q-content">Loading...</div>
       <div id="options-holder"></div>
     </div>
-
     <div class="control-bar">
       <button class="nav-btn btn-prev" onclick="prevQ()">Previous</button>
       <button class="nav-btn btn-submit" onclick="submitExam()">Submit</button>
@@ -62,19 +108,19 @@
     </div>
   </div>
 
-  <div id="result-view" style="display:none; padding:16px; text-align:center; max-width:650px; margin:0 auto;">
-    <div style="background:white; border-radius:12px; padding:20px; border:1px solid #e1e4e8; margin-bottom:20px;">
-      <h2 style="font-size:22px; color:#24292f;">🎉 टेस्ट समाप्त हुआ!</h2>
-      <div style="font-size:36px; font-weight:800; color:#0073e6; margin:12px 0;" id="score-display">0 / 0</div>
-      <div style="display:flex; justify-content:space-around; margin-top:14px; font-size:14px;">
-        <div>सही: <b id="stat-correct" style="color:#2da44e;">0</b></div>
-        <div>गलत: <b id="stat-wrong" style="color:#cf222e;">0</b></div>
-        <div>छोड़े: <b id="stat-skipped" style="color:#57606a;">0</b></div>
+  <!-- VIEW 4: RESULTS SCREEN -->
+  <div id="view-result" class="container" style="display:none; text-align:center;">
+    <div style="background:white; border-radius:12px; padding:20px; border:1px solid #e1e4e8; margin-bottom:18px;">
+      <h2>🎉 Test Submit Ho Gaya!</h2>
+      <div style="font-size:36px; font-weight:800; color:#0073e6; margin:10px 0;" id="score-display">0 / 0</div>
+      <div style="display:flex; justify-content:space-around; font-size:14px;">
+        <div>Sahi: <b id="stat-correct" style="color:#2da44e;">0</b></div>
+        <div>Galat: <b id="stat-wrong" style="color:#cf222e;">0</b></div>
+        <div>Chhode: <b id="stat-skipped" style="color:#57606a;">0</b></div>
       </div>
-      <button class="nav-btn btn-next" style="width:100%; margin-top:16px;" onclick="closePortal()">टेलीग्राम पर परिणाम भेजें</button>
+      <button class="admin-btn" style="width:100%; margin-top:14px;" onclick="showFolderDashboard()">Folders par wapas jayein</button>
     </div>
-
-    <h3 style="text-align:left; margin-bottom:12px; font-size:17px;">📖 विस्तृत हल एवं मुख्य बिंदु:</h3>
+    <h3 style="text-align:left; margin-bottom:12px; font-size:16px;">📖 Detail Solutions:</h3>
     <div id="solutions-list"></div>
   </div>
 
@@ -83,23 +129,125 @@
     tg.ready();
     tg.expand();
 
+    let allFolders = [];
+    let currentFolderId = null;
+    let currentTest = null;
     let questions = [];
     let curIdx = 0;
     let answers = {};
     let duration = 30 * 60;
+    let timerInt = null;
 
-    fetch('/api/questions')
-      .then(res => res.json())
-      .then(data => {
-        questions = data;
-        if(questions && questions.length > 0) {
+    // Load initial folders
+    loadFolders();
+
+    function loadFolders() {
+      fetch('/api/folders')
+        .then(res => res.json())
+        .then(data => {
+          allFolders = data;
+          renderFolders();
+        });
+    }
+
+    function renderFolders() {
+      const holder = document.getElementById('folder-list');
+      holder.innerHTML = '';
+      if (!allFolders || allFolders.length === 0) {
+        holder.innerHTML = '<div style="color:#666;">Koi folder nahi mila. Upar "Manage Folders" se banayein!</div>';
+        return;
+      }
+      allFolders.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'folder-card';
+        div.onclick = () => openFolder(f.id, f.title);
+        div.innerHTML = `
+          <div class="folder-left">
+            <div class="folder-icon">📁</div>
+            <div>
+              <div class="folder-title">${f.title}</div>
+              <div class="folder-count">${f.test_count} Tests Available</div>
+            </div>
+          </div>
+          <span style="color:#999;">➔</span>
+        `;
+        holder.appendChild(div);
+      });
+    }
+
+    function toggleAdminPanel() {
+      const p = document.getElementById('admin-panel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function createFolder() {
+      const name = document.getElementById('new-folder-name').value.trim();
+      if (!name) return alert("Folder name zaroori hai!");
+      fetch('/api/folder/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ title: name })
+      }).then(res => res.json()).then(resp => {
+        document.getElementById('new-folder-name').value = '';
+        toggleAdminPanel();
+        loadFolders();
+      });
+    }
+
+    function openFolder(folderId, title) {
+      currentFolderId = folderId;
+      document.getElementById('current-folder-title').innerText = title;
+      document.getElementById('view-dashboard').style.display = 'none';
+      document.getElementById('view-folder-tests').style.display = 'block';
+
+      fetch(`/api/folder/${folderId}/tests`)
+        .then(res => res.json())
+        .then(tests => {
+          const list = document.getElementById('tests-list');
+          list.innerHTML = '';
+          if (tests.length === 0) {
+            list.innerHTML = '<div style="color:#666;">Is folder me abhi koi test nahi hai. File upload karke is folder me daalein.</div>';
+            return;
+          }
+          tests.forEach(t => {
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            card.innerHTML = `
+              <div>
+                <div class="test-title">${t.title}</div>
+                <div class="test-meta">Total Questions: ${t.total_questions} • 30 Min</div>
+              </div>
+              <button class="start-btn" onclick="startTest('${t.id}')">Start Test</button>
+            `;
+            list.appendChild(card);
+          });
+        });
+    }
+
+    function showFolderDashboard() {
+      if (timerInt) clearInterval(timerInt);
+      document.getElementById('view-exam').style.display = 'none';
+      document.getElementById('view-result').style.display = 'none';
+      document.getElementById('view-folder-tests').style.display = 'none';
+      document.getElementById('view-dashboard').style.display = 'block';
+      loadFolders();
+    }
+
+    function startTest(testId) {
+      fetch('/api/test/' + testId)
+        .then(res => res.json())
+        .then(data => {
+          currentTest = data;
+          questions = data.questions;
+          answers = {};
+          duration = 30 * 60;
+          document.getElementById('view-folder-tests').style.display = 'none';
+          document.getElementById('view-exam').style.display = 'block';
           buildPalette();
           showQuestion(0);
           runTimer();
-        } else {
-          document.getElementById('q-content').innerText = "कोई टेस्ट उपलब्ध नहीं है। कृपया बॉट पर फ़ाइल (.docx / .pdf) भेजें!";
-        }
-      });
+        });
+    }
 
     function buildPalette() {
       const p = document.getElementById('palette-grid');
@@ -119,14 +267,13 @@
       document.getElementById('counter-label').innerText = `Q ${i + 1}/${questions.length}`;
       document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('current'));
       const activeBtn = document.getElementById('p-' + i);
-      if(activeBtn) {
+      if (activeBtn) {
         activeBtn.classList.add('current');
         activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
 
       const item = questions[i];
       document.getElementById('q-content').innerText = `${i + 1}. ${item.question}`;
-
       const holder = document.getElementById('options-holder');
       holder.innerHTML = '';
       const tags = ['(a)', '(b)', '(c)', '(d)'];
@@ -134,16 +281,14 @@
       item.options.forEach((opt, oIdx) => {
         const card = document.createElement('div');
         card.className = 'opt-card' + (answers[i] === oIdx ? ' selected' : '');
-        card.innerHTML = `<span class="opt-tag">${tags[oIdx]}</span><span class="opt-desc">${opt}</span>`;
-        card.onclick = () => pickOption(i, oIdx);
+        card.innerHTML = `<b>${tags[oIdx]}</b> <span>${opt}</span>`;
+        card.onclick = () => {
+          answers[i] = oIdx;
+          document.getElementById('p-' + i).classList.add('answered');
+          showQuestion(i);
+        };
         holder.appendChild(card);
       });
-    }
-
-    function pickOption(qIdx, oIdx) {
-      answers[qIdx] = oIdx;
-      document.getElementById('p-' + qIdx).classList.add('answered');
-      showQuestion(qIdx);
     }
 
     function nextQ() { if (curIdx < questions.length - 1) showQuestion(curIdx + 1); }
@@ -151,7 +296,7 @@
 
     function runTimer() {
       const tEl = document.getElementById('timer');
-      const timerInt = setInterval(() => {
+      timerInt = setInterval(() => {
         duration--;
         const m = Math.floor(duration / 60);
         const s = duration % 60;
@@ -164,17 +309,18 @@
     }
 
     function submitExam() {
-      if(!confirm("क्या आप वाकई टेस्ट सबमिट करना चाहते हैं?")) return;
+      if (!confirm("Test submit karna chahte hain?")) return;
+      clearInterval(timerInt);
 
       let correct = 0, wrong = 0, skipped = 0;
       questions.forEach((q, i) => {
-        if(answers[i] === undefined) skipped++;
-        else if(answers[i] === q.correct_id) correct++;
+        if (answers[i] === undefined) skipped++;
+        else if (answers[i] === q.correct_id) correct++;
         else wrong++;
       });
 
-      document.getElementById('test-view').style.display = 'none';
-      document.getElementById('result-view').style.display = 'block';
+      document.getElementById('view-exam').style.display = 'none';
+      document.getElementById('view-result').style.display = 'block';
       document.getElementById('score-display').innerText = `${correct} / ${questions.length}`;
       document.getElementById('stat-correct').innerText = correct;
       document.getElementById('stat-wrong').innerText = wrong;
@@ -185,36 +331,27 @@
       const tags = ['(a)', '(b)', '(c)', '(d)'];
 
       questions.forEach((q, i) => {
-        const isCorrect = answers[i] === q.correct_id;
-        const userChoice = answers[i] !== undefined ? tags[answers[i]] : 'छोड़ा गया';
         const card = document.createElement('div');
-        card.className = `sol-card ${isCorrect ? 'correct-ans' : 'wrong-ans'}`;
+        card.className = 'sol-card';
         card.innerHTML = `
-          <div style="font-weight:600; font-size:15px; margin-bottom:6px;">Q${i + 1}. ${q.question}</div>
-          <div style="font-size:13px; margin-bottom:4px;">आपका उत्तर: <b>${userChoice}</b> | सही उत्तर: <b style="color:#2da44e;">${tags[q.correct_id]}</b></div>
-          ${q.solution ? `<div class="sol-box"><b>व्याख्या:</b> ${q.solution}</div>` : ''}
+          <div style="font-weight:600;">Q${i + 1}. ${q.question}</div>
+          <div style="font-size:13px; margin:4px 0;">Correct: <b style="color:#2da44e;">${tags[q.correct_id]}</b></div>
+          ${q.solution ? `<div class="sol-box"><b>Solution:</b> ${q.solution}</div>` : ''}
           ${q.key_points ? `<div class="kp-box"><b>Key Points:</b><br>${q.key_points}</div>` : ''}
         `;
         solList.appendChild(card);
       });
 
-      window.lastResult = {
+      tg.sendData(JSON.stringify({
+        title: currentTest.title,
         score: correct,
         total: questions.length,
         correct,
         wrong,
         skipped,
-        accuracy: questions.length > 0 ? Math.round((correct / (correct + wrong || 1)) * 100) : 0
-      };
-    }
-
-    function closePortal() {
-      if(window.lastResult) {
-        tg.sendData(JSON.stringify(window.lastResult));
-      }
-      tg.close();
+        accuracy: Math.round((correct / (correct + wrong || 1)) * 100)
+      }));
     }
   </script>
 </body>
-  </html>
-    
+</html>
