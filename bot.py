@@ -18,7 +18,6 @@ CONFIG_FILE = "folders_config.json"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-# Agar config file nahi hai toh default setup karein
 if not os.path.exists(CONFIG_FILE):
     default_config = {
         "folders": [
@@ -42,7 +41,6 @@ WEBAPP_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://quizz-lfdt.onrender.
 def home():
     return render_template("index.html")
 
-# 1. Sabhi Folders ki list lene ke liye
 @app.route('/api/folders')
 def api_get_folders():
     cfg = read_config()
@@ -55,7 +53,6 @@ def api_get_folders():
         })
     return jsonify(out)
 
-# 2. Naya Folder banane ke liye API
 @app.route('/api/folder/create', methods=['POST'])
 def api_create_folder():
     data = request.json or {}
@@ -68,7 +65,6 @@ def api_create_folder():
     save_config(cfg)
     return jsonify({"success": True, "id": folder_id})
 
-# 3. Kisi folder ke andar ke tests lene ke liye
 @app.route('/api/folder/<folder_id>/tests')
 def api_folder_tests(folder_id):
     cfg = read_config()
@@ -91,7 +87,6 @@ def api_folder_tests(folder_id):
                 pass
     return jsonify(tests)
 
-# 4. Single Test load karne ke liye
 @app.route('/api/test/<test_id>')
 def api_get_test(test_id):
     path = os.path.join(DATA_DIR, f"{test_id}.json")
@@ -110,8 +105,6 @@ threading.Thread(target=run_web, daemon=True).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 bot = telebot.TeleBot(BOT_TOKEN)
 current_target_channel = "@FIRST_GARDE_SPL"
-
-# User ki current active folder choice ko track karne ke liye
 user_active_folder = {}
 
 def extract_text_from_pdf(file_path):
@@ -182,26 +175,26 @@ def send_welcome(message):
     markup.add(InlineKeyboardButton(text="📂 Open Portal & Folders", web_app=WebAppInfo(url=current_url)))
 
     cfg = read_config()
-    folder_list_str = "\n".join([f"• `{f['title']}`" for f in cfg.get("folders", [])])
+    folder_list_str = "\n".join([f"• <b>{f['title']}</b>" for f in cfg.get("folders", [])])
 
     text = (
-        "🤖 *Testbook Multi-Folder Portal*\n\n"
-        f"🎯 Active Channel: `{current_target_channel}`\n\n"
-        "📁 *Current Folders:*\n"
+        "🤖 <b>Testbook Multi-Folder Portal</b>\n\n"
+        f"🎯 Active Channel: <code>{current_target_channel}</code>\n\n"
+        "📁 <b>Current Folders:</b>\n"
         f"{folder_list_str}\n\n"
-        "🛠 *Commands:*\n"
-        "1. `/setchannel @channel` - Target channel badalne ke liye\n"
-        "2. `/newfolder FolderName` - Naya folder chat se banane ke liye\n"
-        "3. `/setfolder FolderName` - Aane wali file ko specific folder me save karne ke liye\n"
-        "4. `/posttochannel` - Channel par dashboard button post karne ke liye"
+        "🛠 <b>Commands:</b>\n"
+        "1. <code>/setchannel @channel</code> - Target channel badalne ke liye\n"
+        "2. <code>/newfolder FolderName</code> - Naya folder chat se banane ke liye\n"
+        "3. <code>/setfolder FolderName</code> - Aane wali file ko specific folder me save karne ke liye\n"
+        "4. <code>/posttochannel</code> - Channel par dashboard button post karne ke liye"
     )
-    bot.reply_to(message, text, reply_markup=markup, parse_mode="Markdown")
+    bot.reply_to(message, text, reply_markup=markup, parse_mode="HTML")
 
 @bot.message_handler(commands=['newfolder'])
 def new_folder_cmd(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        bot.reply_to(message, "Folder name likhein. Example: `/newfolder Special Education Batch 2`", parse_mode="Markdown")
+        bot.reply_to(message, "Folder name likhein. Example: /newfolder Special Education Batch 2")
         return
     title = parts[1].strip()
     cfg = read_config()
@@ -209,51 +202,54 @@ def new_folder_cmd(message):
     cfg["folders"].append({"id": fid, "title": title, "test_ids": []})
     save_config(cfg)
     user_active_folder[message.chat.id] = fid
-    bot.reply_to(message, f"✅ Naya folder ban gaya aur select ho gaya: *{title}*", parse_mode="Markdown")
+    bot.reply_to(message, f"✅ Naya folder ban gaya aur select ho gaya: <b>{title}</b>", parse_mode="HTML")
 
 @bot.message_handler(commands=['setfolder'])
 def set_active_folder_cmd(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        bot.reply_to(message, "Folder name likhein. Example: `/setfolder Batch 1`", parse_mode="Markdown")
+        bot.reply_to(message, "Folder name likhein. Example: /setfolder Batch 1")
         return
     query = parts[1].strip().lower()
     cfg = read_config()
     match = next((f for f in cfg["folders"] if query in f["title"].lower()), None)
     if match:
         user_active_folder[message.chat.id] = match["id"]
-        bot.reply_to(message, f"✅ Agli files ab is folder me jayengi: *{match['title']}*", parse_mode="Markdown")
+        bot.reply_to(message, f"✅ Agli files ab is folder me jayengi: <b>{match['title']}</b>", parse_mode="HTML")
     else:
-        bot.reply_to(message, "❌ Ye folder nahi mila. Pehle `/newfolder` se create karein.")
+        bot.reply_to(message, "❌ Ye folder nahi mila. Pehle /newfolder se create karein.")
 
 @bot.message_handler(commands=['setchannel'])
 def set_channel_cmd(message):
     global current_target_channel
     parts = message.text.split()
     if len(parts) < 2:
-        bot.reply_to(message, "Channel ka username likhein: `/setchannel @MyChannel`", parse_mode="Markdown")
+        bot.reply_to(message, "Channel ka username likhein: /setchannel @MyChannel")
         return
     ch = parts[1].strip()
     if not ch.startswith("@") and not ch.startswith("-100"): ch = "@" + ch
     current_target_channel = ch
-    bot.reply_to(message, f"✅ Target channel set ho gaya: `{current_target_channel}`", parse_mode="Markdown")
+    bot.reply_to(message, f"✅ Target channel set ho gaya: <code>{current_target_channel}</code>", parse_mode="HTML")
 
 @bot.message_handler(commands=['posttochannel'])
 def post_channel_cmd(message):
-    current_url = os.environ.get("RENDER_EXTERNAL_URL", WEBAPP_URL)
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton(text="🚀 Open Test Portal", web_app=WebAppInfo(url=current_url)))
-
-    post_text = (
-        "📢 *Online Mock Test Series Portal Live!*\n\n"
-        "• Testbook Style Navigation & Palette\n"
-        "• Folder-wise Categorized Test Series\n"
-        "• Instant Scorecard, Analysis & Complete Solutions\n\n"
-        "Test dene ke liye neeche click karein 👇"
-    )
     try:
-        bot.send_message(chat_id=current_target_channel, text=post_text, reply_markup=markup, parse_mode="Markdown")
-        bot.reply_to(message, f"✅ Channel `{current_target_channel}` par post ho gaya!")
+        bot_info = bot.get_me()
+        bot_username = bot_info.username
+        channel_url = f"https://t.me/{bot_username}?startapp=test"
+
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(text="🚀 Open Test Portal", url=channel_url))
+
+        post_text = (
+            "📢 <b>Online Mock Test Series Portal Live!</b>\n\n"
+            "• Testbook Style Navigation & Timer\n"
+            "• Folder-wise Categorized Test Series\n"
+            "• Instant Scorecard, Analysis & Complete Solutions\n\n"
+            "Test dene ke liye neeche button par click karein 👇"
+        )
+        bot.send_message(chat_id=current_target_channel, text=post_text, reply_markup=markup, parse_mode="HTML")
+        bot.reply_to(message, f"✅ Channel <code>{current_target_channel}</code> par successfully post ho gaya!", parse_mode="HTML")
     except Exception as e:
         bot.reply_to(message, f"❌ Error: {e}")
 
@@ -290,16 +286,14 @@ def handle_doc_upload(message):
             "questions": quizzes
         }
 
-        # Save test questions
         with open(os.path.join(DATA_DIR, f"{test_id}.json"), 'w', encoding='utf-8') as f:
             json.dump(test_payload, f, ensure_ascii=False, indent=2)
 
-        # Folder me map karein
         cfg = read_config()
         chosen_fid = user_active_folder.get(message.chat.id)
         target_folder = next((f for f in cfg["folders"] if f["id"] == chosen_fid), None)
         if not target_folder:
-            target_folder = cfg["folders"][0] # Default first folder
+            target_folder = cfg["folders"][0]
 
         target_folder["test_ids"].append(test_id)
         save_config(cfg)
@@ -309,15 +303,43 @@ def handle_doc_upload(message):
         markup.add(InlineKeyboardButton(text="📂 Open Portal", web_app=WebAppInfo(url=current_url)))
 
         bot.edit_message_text(
-            f"🎉 *Test Successfully Uploaded!*\n\n"
-            f"📁 *Folder:* {target_folder['title']}\n"
-            f"📝 *Test Name:* {test_payload['title']}\n"
-            f"📊 *Questions:* {len(quizzes)}",
+            f"🎉 <b>Test Successfully Uploaded!</b>\n\n"
+            f"📁 <b>Folder:</b> {target_folder['title']}\n"
+            f"📝 <b>Test Name:</b> {test_payload['title']}\n"
+            f"📊 <b>Questions:</b> {len(quizzes)}",
             chat_id=message.chat.id,
             message_id=status.message_id,
             reply_markup=markup,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
+
+        # Auto-post to Channel with safe HTML formatting
+        try:
+            bot_info = bot.get_me()
+            bot_username = bot_info.username
+            channel_url = f"https://t.me/{bot_username}?startapp=test"
+
+            ch_markup = InlineKeyboardMarkup()
+            ch_markup.add(InlineKeyboardButton(
+                text=f"📝 Start {test_payload['title']}",
+                url=channel_url
+            ))
+
+            bot.send_message(
+                chat_id=current_target_channel,
+                text=(
+                    f"🔥 <b>New Test Uploaded!</b>\n\n"
+                    f"📁 <b>Folder:</b> {target_folder['title']}\n"
+                    f"📝 <b>Test:</b> {test_payload['title']}\n"
+                    f"📊 <b>Total Questions:</b> {len(quizzes)}\n\n"
+                    "Test dene ke liye neeche button par click karein:"
+                ),
+                reply_markup=ch_markup,
+                parse_mode="HTML"
+            )
+        except Exception as ce:
+            print(f"Channel post error: {ce}")
+
     except Exception as e:
         bot.reply_to(message, f"❌ Error: {e}")
     finally:
@@ -327,7 +349,11 @@ def handle_doc_upload(message):
 def handle_result(message):
     try:
         data = json.loads(message.web_app_data.data)
-        bot.reply_to(message, f"📊 *Result Saved:*\nScore: *{data['score']}/{data['total']}* | Accuracy: *{data['accuracy']}%*", parse_mode="Markdown")
+        bot.reply_to(
+            message,
+            f"📊 <b>Result Saved:</b>\nScore: <b>{data['score']}/{data['total']}</b> | Accuracy: <b>{data['accuracy']}%</b>",
+            parse_mode="HTML"
+        )
     except Exception:
         pass
 
@@ -336,4 +362,3 @@ if __name__ == "__main__":
     try: bot.remove_webhook()
     except Exception: pass
     bot.infinity_polling(skip_pending=True)
-    
