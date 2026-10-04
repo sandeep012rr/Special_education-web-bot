@@ -185,8 +185,9 @@ def send_welcome(message):
         "🛠 <b>Commands:</b>\n"
         "1. <code>/setchannel @channel</code> - Target channel badalne ke liye\n"
         "2. <code>/newfolder FolderName</code> - Naya folder chat se banane ke liye\n"
-        "3. <code>/setfolder FolderName</code> - Aane wali file ko specific folder me save karne ke liye\n"
-        "4. <code>/posttochannel</code> - Channel par dashboard button post karne ke liye"
+        "3. <code>/setfolder FolderName</code> - Aane wali file ke liye folder chunne ke liye\n"
+        "4. <code>/renamefolder PuranaNaam -> NayaNaam</code> - Folder ka naam rename karne ke liye\n"
+        "5. <code>/posttochannel</code> - Channel par dashboard button post karne ke liye"
     )
     bot.reply_to(message, text, reply_markup=markup, parse_mode="HTML")
 
@@ -218,6 +219,37 @@ def set_active_folder_cmd(message):
         bot.reply_to(message, f"✅ Agli files ab is folder me jayengi: <b>{match['title']}</b>", parse_mode="HTML")
     else:
         bot.reply_to(message, "❌ Ye folder nahi mila. Pehle /newfolder se create karein.")
+
+@bot.message_handler(commands=['renamefolder'])
+def rename_folder_cmd(message):
+    raw_text = message.text.replace('/renamefolder', '', 1).strip()
+    if "->" not in raw_text:
+        bot.reply_to(
+            message,
+            "❌ <b>गलत फॉर्मेट!</b>\n\nइस तरह लिखें:\n<code>/renamefolder PuranaNaam -> NayaNaam</code>\n\n<b>उदाहरण:</b>\n<code>/renamefolder General Tests -> Inclusive Education</code>",
+            parse_mode="HTML"
+        )
+        return
+
+    old_name, new_name = [x.strip() for x in raw_text.split("->", 1)]
+    if not old_name or not new_name:
+        bot.reply_to(message, "पुराना और नया दोनों नाम लिखना ज़रूरी है।")
+        return
+
+    cfg = read_config()
+    folder = next((f for f in cfg.get("folders", []) if old_name.lower() in f["title"].lower()), None)
+    
+    if folder:
+        old_title = folder["title"]
+        folder["title"] = new_name
+        save_config(cfg)
+        bot.reply_to(
+            message,
+            f"✅ <b>फ़ोल्डर का नाम बदल दिया गया है!</b>\n\n📁 पहले: <s>{old_title}</s>\n✨ अब: <b>{new_name}</b>",
+            parse_mode="HTML"
+        )
+    else:
+        bot.reply_to(message, f"❌ '<code>{old_name}</code>' नाम का कोई फ़ोल्डर नहीं मिला।", parse_mode="HTML")
 
 @bot.message_handler(commands=['setchannel'])
 def set_channel_cmd(message):
