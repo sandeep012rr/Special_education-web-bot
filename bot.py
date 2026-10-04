@@ -29,7 +29,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # 🔴 YAHAN APNI TELEGRAM USER ID DALEIN (Numbers only)
-ADMIN_ID = int(os.environ.get("ADMIN_ID", 7750388566)  # @userinfobot se nikali gayi id
+ADMIN_ID = int(os.environ.get("ADMIN_ID", 7750388566) )  # @userinfobot se nikali gayi id
 
 BACKUP_CHANNEL_ID = -1004467756991
 current_target_channel = "@special_education_quiz"
