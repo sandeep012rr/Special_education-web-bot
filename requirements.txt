@@ -1,0 +1,4 @@
+pyTelegramBotAPI
+pypdf
+python-docx
+Flask
