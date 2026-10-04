@@ -9,6 +9,7 @@ from telebot.types import (
     InlineKeyboardButton, 
     ReplyKeyboardMarkup, 
     KeyboardButton, 
+    ReplyKeyboardRemove,
     WebAppInfo
 )
 from pypdf import PdfReader
@@ -27,14 +28,15 @@ if not os.path.exists(DATA_DIR):
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# आपका प्राइवेट बैकअप चैनल
+# 🔴 YAHAN APNI TELEGRAM USER ID DALEIN (Numbers only)
+ADMIN_ID = int(os.environ.get("ADMIN_ID", 123456789))  # @userinfobot se nikali gayi id
+
 BACKUP_CHANNEL_ID = -1004467756991
-current_target_channel = "@FIRST_GARDE_SPL"
+current_target_channel = "@special_education_quiz"
 user_active_folder = {}
 
 # ================= TELEGRAM CLOUD SYNC ENGINE =================
 def backup_file_to_channel(file_path, caption):
-    """फ़ाइल को बैकअप चैनल में चुपचाप भेजता है"""
     try:
         if os.path.exists(file_path):
             with open(file_path, 'rb') as doc:
@@ -43,37 +45,28 @@ def backup_file_to_channel(file_path, caption):
         print(f"Backup Error: {e}")
 
 def restore_data_from_channel():
-    """सर्वर रीस्टार्ट होने पर बैकअप चैनल से सारा डेटा वापस डाउनलोड करता है"""
     try:
         print("Restoring data from Telegram Backup Channel...")
-        # चैनल के हालिया 100 संदेशों की जांच
         updates = bot.get_chat_history(chat_id=BACKUP_CHANNEL_ID, limit=100) if hasattr(bot, 'get_chat_history') else []
         for msg in updates:
             if msg.document:
                 caption = msg.caption or ""
                 fname = msg.document.file_name
-                
-                # कॉन्फ़िग रीस्टोर
                 if "#CONFIG_BACKUP" in caption or fname == "folders_config.json":
                     if not os.path.exists(CONFIG_FILE):
                         f_info = bot.get_file(msg.document.file_id)
                         content = bot.download_file(f_info.file_path)
-                        with open(CONFIG_FILE, 'wb') as f:
-                            f.write(content)
-                
-                # टेस्ट फ़ाइल रीस्टोर
+                        with open(CONFIG_FILE, 'wb') as f: f.write(content)
                 elif "#TEST_BACKUP" in caption or (fname.startswith("test_") and fname.endswith(".json")):
                     target_path = os.path.join(DATA_DIR, fname)
                     if not os.path.exists(target_path):
                         f_info = bot.get_file(msg.document.file_id)
                         content = bot.download_file(f_info.file_path)
-                        with open(target_path, 'wb') as f:
-                            f.write(content)
+                        with open(target_path, 'wb') as f: f.write(content)
         print("Data restoration completed.")
     except Exception as e:
         print(f"Restore note/bypass: {e}")
 
-# डिफ़ॉल्ट कॉन्फ़िग इनिशियलाइज़ेशन
 if not os.path.exists(CONFIG_FILE):
     default_config = {
         "folders": [
@@ -159,7 +152,7 @@ def run_web():
 threading.Thread(target=run_web, daemon=True).start()
 # ======================================================
 
-def get_main_keyboard():
+def get_admin_keyboard():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row(KeyboardButton("📂 Open Portal"), KeyboardButton("📁 List Folders"))
     markup.row(KeyboardButton("📢 Post to Channel"), KeyboardButton("ℹ️ Help"))
@@ -226,33 +219,60 @@ def parse_document_to_mcqs(text):
             continue
     return quizzes
 
-@bot.message_handler(commands=['start', 'help'])
-@bot.message_handler(func=lambda m: m.text in ["ℹ️ Help", "/help"])
-def send_welcome(message):
+# ================= USER / STUDENT VS ADMIN ROUTING =================
+@bot.message_handler(commands=['start'])
+def handle_start(message):
     current_url = os.environ.get("RENDER_EXTERNAL_URL", WEBAPP_URL)
-    inline_markup = InlineKeyboardMarkup()
-    inline_markup.add(InlineKeyboardButton(text="🚀 Launch Exam Portal", web_app=WebAppInfo(url=current_url)))
+    
+    # 1. AGAR USER ADMIN HAI:
+    if message.from_user.id == ADMIN_ID:
+        inline_markup = InlineKeyboardMarkup()
+        inline_markup.add(InlineKeyboardButton(text="🚀 Launch Exam Portal", web_app=WebAppInfo(url=current_url)))
 
-    cfg = read_config()
-    folder_list_str = "\n".join([f"• <b>{f['title']}</b>" for f in cfg.get("folders", [])])
+        cfg = read_config()
+        folder_list_str = "\n".join([f"• <b>{f['title']}</b>" for f in cfg.get("folders", [])])
 
-    text = (
-        "🤖 <b>Testbook Multi-Folder Portal Controller</b>\n\n"
-        f"🎯 <b>वर्तमान चैनल:</b> <code>{current_target_channel}</code>\n"
-        "💾 <b>क्लाउड बैकअप:</b> सक्रिय (चैनल ID: <code>-1004467756991</code>) ✅\n\n"
-        "📁 <b>उपलब्ध फ़ोल्डर:</b>\n"
-        f"{folder_list_str}\n\n"
-        "🛠 <b>कमांड्स:</b>\n"
-        "1. <code>/newfolder FolderName</code> - नया फ़ोल्डर बनाएँ\n"
-        "2. <code>/setfolder FolderName</code> - फ़ाइल अपलोड हेतु फ़ोल्डर चुनें\n"
-        "3. <code>/renamefolder PuranaNaam -> NayaNaam</code> - फ़ोल्डर का नाम बदलें\n"
-        "4. <code>/setchannel @channel</code> - लक्ष्य चैनल बदलें\n\n"
-        "नीचे मेनू बटन का उपयोग करके भी कमांड भेज सकते हैं 👇"
+        admin_text = (
+            "👑 <b>Admin Control Panel</b>\n\n"
+            f"🎯 <b>वर्तमान चैनल:</b> <code>{current_target_channel}</code>\n"
+            "💾 <b>क्लाउड बैकअप:</b> सक्रिय (-1004467756991) ✅\n\n"
+            "📁 <b>उपलब्ध फ़ोल्डर:</b>\n"
+            f"{folder_list_str}\n\n"
+            "🛠 <b>कमांड्स:</b>\n"
+            "• <code>/newfolder FolderName</code>\n"
+            "• <code>/setfolder FolderName</code>\n"
+            "• <code>/renamefolder Purana -> Naya</code>\n"
+            "• <code>/setchannel @channel</code>\n\n"
+            "<i>(फाइल अपलोड करने के लिए सीधे .docx फाइल भेजें)</i>"
+        )
+        bot.send_message(message.chat.id, "Welcome Admin!", reply_markup=get_admin_keyboard())
+        bot.reply_to(message, admin_text, reply_markup=inline_markup, parse_mode="HTML")
+        return
+
+    # 2. AGAR USER STUDENT HAI:
+    student_markup = InlineKeyboardMarkup()
+    student_markup.add(InlineKeyboardButton(
+        text="📝 Start Mock Test Portal", 
+        web_app=WebAppInfo(url=current_url)
+    ))
+
+    student_text = (
+        "👋 <b>Welcome to Testbook Mock Test Portal!</b>\n\n"
+        "🎯 यहाँ आप सभी नवीनतम टेस्ट सीरीज और मॉक टेस्ट दे सकते हैं।\n"
+        "• Real Testbook Exam Timer\n"
+        "• Detailed Solutions & Instant Analysis\n\n"
+        "👇 <b>टेस्ट शुरू करने के लिए नीचे बटन दबाएँ:</b>"
     )
-    bot.send_message(message.chat.id, "कंट्रोल पैनल सक्रिय है:", reply_markup=get_main_keyboard())
-    bot.reply_to(message, text, reply_markup=inline_markup, parse_mode="HTML")
+    # छात्रों के स्क्रीन से कीबोर्ड हटा दें ताकि उन्हें कोई एडमिन बटन न दिखे
+    bot.send_message(
+        message.chat.id, 
+        student_text, 
+        reply_markup=student_markup, 
+        parse_mode="HTML"
+    )
 
-@bot.message_handler(func=lambda m: m.text == "📂 Open Portal")
+# ================= ADMIN PROTECTED COMMANDS =================
+@bot.message_handler(func=lambda m: m.text == "📂 Open Portal" and m.from_user.id == ADMIN_ID)
 def btn_open_portal(message):
     current_url = os.environ.get("RENDER_EXTERNAL_URL", WEBAPP_URL)
     inline_markup = InlineKeyboardMarkup()
@@ -260,18 +280,19 @@ def btn_open_portal(message):
     bot.reply_to(message, "पोर्टल खोलने के लिए नीचे दिए गए बटन पर टैप करें:", reply_markup=inline_markup)
 
 @bot.message_handler(commands=['listfolders'])
-@bot.message_handler(func=lambda m: m.text == "📁 List Folders")
+@bot.message_handler(func=lambda m: m.text == "📁 List Folders" and m.from_user.id == ADMIN_ID)
 def btn_list_folders(message):
+    if message.from_user.id != ADMIN_ID: return
     cfg = read_config()
     res = "📁 <b>उपलब्ध फ़ोल्डर एवं टेस्ट की संख्या:</b>\n\n"
     for idx, f in enumerate(cfg.get("folders", []), 1):
         res += f"{idx}. <b>{f['title']}</b> ({len(f.get('test_ids', []))} टेस्ट उपलब्ध)\n"
-    res += "\nनया फ़ोल्डर बनाने के लिए लिखें:\n<code>/newfolder FolderName</code>"
     bot.reply_to(message, res, parse_mode="HTML")
 
 @bot.message_handler(commands=['posttochannel'])
-@bot.message_handler(func=lambda m: m.text == "📢 Post to Channel")
+@bot.message_handler(func=lambda m: m.text == "📢 Post to Channel" and m.from_user.id == ADMIN_ID)
 def post_channel_cmd(message):
+    if message.from_user.id != ADMIN_ID: return
     try:
         bot_info = bot.get_me()
         bot_username = bot_info.username
@@ -294,9 +315,10 @@ def post_channel_cmd(message):
 
 @bot.message_handler(commands=['newfolder'])
 def new_folder_cmd(message):
+    if message.from_user.id != ADMIN_ID: return
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        bot.reply_to(message, "फ़ोल्डर का नाम लिखें। उदाहरण: <code>/newfolder Batch 2</code>", parse_mode="HTML")
+        bot.reply_to(message, "फ़ोल्डर का नाम लिखें।")
         return
     title = parts[1].strip()
     cfg = read_config()
@@ -304,13 +326,14 @@ def new_folder_cmd(message):
     cfg["folders"].append({"id": fid, "title": title, "test_ids": []})
     save_config(cfg)
     user_active_folder[message.chat.id] = fid
-    bot.reply_to(message, f"✅ नया फ़ोल्डर बन गया और क्लाउड पर सहेज लिया गया: <b>{title}</b>", parse_mode="HTML")
+    bot.reply_to(message, f"✅ नया फ़ोल्डर बन गया: <b>{title}</b>", parse_mode="HTML")
 
 @bot.message_handler(commands=['setfolder'])
 def set_active_folder_cmd(message):
+    if message.from_user.id != ADMIN_ID: return
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        bot.reply_to(message, "फ़ोल्डर का नाम लिखें। उदाहरण: <code>/setfolder Batch 1</code>", parse_mode="HTML")
+        bot.reply_to(message, "फ़ोल्डर का नाम लिखें।")
         return
     query = parts[1].strip().lower()
     cfg = read_config()
@@ -319,53 +342,47 @@ def set_active_folder_cmd(message):
         user_active_folder[message.chat.id] = match["id"]
         bot.reply_to(message, f"✅ अगली फ़ाइलें इस फ़ोल्डर में जाएँगी: <b>{match['title']}</b>", parse_mode="HTML")
     else:
-        bot.reply_to(message, "❌ यह फ़ोल्डर नहीं मिला। पहले <code>/newfolder</code> से बनाएँ।", parse_mode="HTML")
+        bot.reply_to(message, "❌ यह फ़ोल्डर नहीं मिला।", parse_mode="HTML")
 
 @bot.message_handler(commands=['renamefolder'])
 def rename_folder_cmd(message):
+    if message.from_user.id != ADMIN_ID: return
     raw_text = message.text.replace('/renamefolder', '', 1).strip()
     if "->" not in raw_text:
-        bot.reply_to(
-            message,
-            "❌ <b>गलत फॉर्मेट!</b>\n\nइस तरह लिखें:\n<code>/renamefolder PuranaNaam -> NayaNaam</code>",
-            parse_mode="HTML"
-        )
+        bot.reply_to(message, "Format: <code>/renamefolder PuranaNaam -> NayaNaam</code>", parse_mode="HTML")
         return
 
     old_name, new_name = [x.strip() for x in raw_text.split("->", 1)]
-    if not old_name or not new_name:
-        bot.reply_to(message, "पुराना और नया दोनों नाम लिखना ज़रूरी है।")
-        return
-
     cfg = read_config()
     folder = next((f for f in cfg.get("folders", []) if old_name.lower() in f["title"].lower()), None)
-    
     if folder:
         old_title = folder["title"]
         folder["title"] = new_name
         save_config(cfg)
-        bot.reply_to(
-            message,
-            f"✅ <b>फ़ोल्डर का नाम बदल दिया गया है!</b>\n\n📁 पहले: <s>{old_title}</s>\n✨ अब: <b>{new_name}</b>\n(क्लाउड बैकअप अपडेट हो गया)",
-            parse_mode="HTML"
-        )
+        bot.reply_to(message, f"✅ फ़ोल्डर का नाम बदल दिया गया: <b>{new_name}</b>", parse_mode="HTML")
     else:
-        bot.reply_to(message, f"❌ '<code>{old_name}</code>' नाम का कोई फ़ोल्डर नहीं मिला।", parse_mode="HTML")
+        bot.reply_to(message, "❌ फ़ोल्डर नहीं मिला।", parse_mode="HTML")
 
 @bot.message_handler(commands=['setchannel'])
 def set_channel_cmd(message):
+    if message.from_user.id != ADMIN_ID: return
     global current_target_channel
     parts = message.text.split()
     if len(parts) < 2:
-        bot.reply_to(message, "चैनल का यूज़रनेम लिखें: <code>/setchannel @MyChannel</code>", parse_mode="HTML")
+        bot.reply_to(message, "चैनल का नाम लिखें।")
         return
     ch = parts[1].strip()
     if not ch.startswith("@") and not ch.startswith("-100"): ch = "@" + ch
     current_target_channel = ch
     bot.reply_to(message, f"✅ लक्ष्य चैनल सेट हो गया: <code>{current_target_channel}</code>", parse_mode="HTML")
 
+# फ़ाइल अपलोड केवल ADMIN के लिए
 @bot.message_handler(content_types=['document'])
 def handle_doc_upload(message):
+    if message.from_user.id != ADMIN_ID:
+        # अगर कोई छात्र फ़ाइल भेजे तो उसे कुछ न करने दें
+        return
+
     local_path = None
     try:
         file_name = message.document.file_name
@@ -397,20 +414,16 @@ def handle_doc_upload(message):
             "questions": quizzes
         }
 
-        # 1. स्थानीय रूप से JSON सहेजें
         test_rel_path = os.path.join(DATA_DIR, f"{test_id}.json")
         with open(test_rel_path, 'w', encoding='utf-8') as f:
             json.dump(test_payload, f, ensure_ascii=False, indent=2)
 
-        # 2. बैकअप चैनल में स्थायी रूप से भेजें
         threading.Thread(target=backup_file_to_channel, args=(test_rel_path, f"#TEST_BACKUP {safe_title}"), daemon=True).start()
 
-        # 3. फ़ोल्डर कॉन्फ़िग अपडेट करें
         cfg = read_config()
         chosen_fid = user_active_folder.get(message.chat.id)
         target_folder = next((f for f in cfg["folders"] if f["id"] == chosen_fid), None)
-        if not target_folder:
-            target_folder = cfg["folders"][0]
+        if not target_folder: target_folder = cfg["folders"][0]
 
         target_folder["test_ids"].append(test_id)
         save_config(cfg)
@@ -420,59 +433,22 @@ def handle_doc_upload(message):
         markup.add(InlineKeyboardButton(text="📂 Open Portal", web_app=WebAppInfo(url=current_url)))
 
         bot.edit_message_text(
-            f"🎉 <b>नया टेस्ट लोड और स्थायी सुरक्षित हो गया!</b>\n\n"
+            f"🎉 <b>नया टेस्ट लोड और बैकअप हो गया!</b>\n\n"
             f"📁 <b>फ़ोल्डर:</b> {target_folder['title']}\n"
             f"📝 <b>टेस्ट:</b> {test_payload['title']}\n"
-            f"📊 <b>कुल प्रश्न:</b> {len(quizzes)}\n"
-            "🔒 <i>डेटा आपके बैकअप चैनल में हमेशा के लिए सुरक्षित है।</i>",
+            f"📊 <b>कुल प्रश्न:</b> {len(quizzes)}",
             chat_id=message.chat.id,
             message_id=status.message_id,
             reply_markup=markup,
             parse_mode="HTML"
         )
-
-        try:
-            bot_info = bot.get_me()
-            bot_username = bot_info.username
-            channel_url = f"https://t.me/{bot_username}?startapp=test"
-
-            ch_markup = InlineKeyboardMarkup()
-            ch_markup.add(InlineKeyboardButton(text=f"📝 Start {test_payload['title']}", url=channel_url))
-
-            bot.send_message(
-                chat_id=current_target_channel,
-                text=(
-                    f"🔥 <b>New Test Uploaded!</b>\n\n"
-                    f"📁 <b>फ़ोल्डर:</b> {target_folder['title']}\n"
-                    f"📝 <b>टेस्ट:</b> {test_payload['title']}\n"
-                    f"📊 <b>कुल प्रश्न:</b> {len(quizzes)}\n\n"
-                    "टेस्ट देने के लिए नीचे बटन पर क्लिक करें:"
-                ),
-                reply_markup=ch_markup,
-                parse_mode="HTML"
-            )
-        except Exception as ce:
-            print(f"Channel post error: {ce}")
-
     except Exception as e:
         bot.reply_to(message, f"❌ Error: {e}")
     finally:
         if local_path and os.path.exists(local_path): os.remove(local_path)
 
-@bot.message_handler(content_types=['web_app_data'])
-def handle_result(message):
-    try:
-        data = json.loads(message.web_app_data.data)
-        bot.reply_to(
-            message,
-            f"📊 <b>परिणाम सहेजा गया:</b>\nस्कोर: <b>{data['score']}/{data['total']}</b> | सटीकता: <b>{data['accuracy']}%</b>",
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-
 if __name__ == "__main__":
-    print("Starting bot and restoring database...")
+    print("Bot Live with Admin Security...")
     threading.Thread(target=restore_data_from_channel, daemon=True).start()
     try: bot.remove_webhook()
     except Exception: pass
